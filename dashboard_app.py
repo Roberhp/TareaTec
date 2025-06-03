@@ -1,73 +1,76 @@
-import streamlit as st
 import pandas as pd
 import plotly.express as px
+import streamlit as st
 
 # Cargar datos
 df = pd.read_csv("employee_data.csv")
 
 # Título y descripción
-st.title("Análisis de Desempeño de Empleados - Socialize Your Knowledge")
-st.markdown("""
-Esta aplicación permite visualizar el rendimiento de los empleados usando distintos filtros.
-""")
+st.title("Análisis de Desempeño de los Colaboradores")
+st.markdown("Este dashboard permite explorar datos clave del personal de Socialize your Knowledge, facilitando la toma de decisiones basadas en desempeño, género y otros atributos laborales.")
+
+# Logo
+st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Logo_socialize.png/320px-Logo_socialize.png", width=150)
 
 # Filtros
-gender_filter = st.multiselect("Selecciona género(s):", df["gender"].unique(), default=df["gender"].unique())
-performance_filter = st.slider("Puntaje de desempeño:", 1, 5, (1, 5))
-marital_filter = st.multiselect("Estado civil:", df["marital_status"].unique(), default=df["marital_status"].unique())
+st.sidebar.header("Filtros")
+selected_genders = st.sidebar.multiselect("Selecciona género(s)", df['gender'].unique(), default=df['gender'].unique())
+performance_range = st.sidebar.slider("Puntaje de desempeño", int(df['performance_score'].min()), int(df['performance_score'].max()), (1, 5))
+selected_marital = st.sidebar.selectbox("Selecciona estado civil", ["Todos"] + list(df['marital_status'].unique()))
 
-# Aplicar filtros para gráficos generales
-df_filtered = df[
-    (df["gender"].isin(gender_filter)) &
-    (df["performance_score"].between(*performance_filter)) &
-    (df["marital_status"].isin(marital_filter))
+# Aplicar filtros
+filtered_df = df[
+    (df['gender'].isin(selected_genders)) &
+    (df['performance_score'] >= performance_range[0]) &
+    (df['performance_score'] <= performance_range[1])
 ]
+if selected_marital != "Todos":
+    filtered_df = filtered_df[filtered_df['marital_status'] == selected_marital]
 
-st.markdown(f"**Total de registros que cumplen los filtros: {len(df_filtered)}**")
-
-# Gráficos: 2 por fila
+# Gráficos lado a lado
 col1, col2 = st.columns(2)
+
 with col1:
-    st.subheader("Distribución del puntaje de desempeño")
-    fig1 = px.histogram(df_filtered, x="performance_score", nbins=5, text_auto=True)
-    st.plotly_chart(fig1, use_container_width=True)
+    st.subheader("Distribución de Puntajes de Desempeño")
+    fig1 = px.histogram(filtered_df, x='performance_score', nbins=5, 
+                        title="Puntaje de desempeño", labels={'performance_score': 'Puntaje'},
+                        text_auto=True)
+    st.plotly_chart(fig1)
 
 with col2:
-    st.subheader("Promedio de horas trabajadas por género")
-    df_horas = df[
-        (df["performance_score"].between(*performance_filter)) &
-        (df["marital_status"].isin(marital_filter))
+    st.subheader("Promedio de Horas Trabajadas por Género")
+    df_hrs = df[
+        (df['performance_score'] >= performance_range[0]) &
+        (df['performance_score'] <= performance_range[1])
     ]
-    fig2 = px.bar(
-        df_horas.groupby("gender")["average_work_hours"].mean().reset_index(),
-        x="gender", y="average_work_hours", color="gender", text_auto=True,
-        labels={"average_work_hours": "Horas promedio"},
-        title="Horas trabajadas por género"
-    )
-    st.plotly_chart(fig2, use_container_width=True)
+    if selected_marital != "Todos":
+        df_hrs = df_hrs[df_hrs['marital_status'] == selected_marital]
+    fig2 = px.bar(df_hrs.groupby('gender')['average_work_hours'].mean().reset_index(), 
+                  x='gender', y='average_work_hours',
+                  title="Horas promedio por género", labels={'average_work_hours': 'Horas promedio'})
+    st.plotly_chart(fig2)
 
-col3, col4 = st.columns(2)
-with col3:
-    st.subheader("Edad vs. Salario")
-    fig3 = px.scatter(
-        df_filtered, x="age", y="salary", color="position",
-        hover_data=["name_employee", "gender"], title="Relación entre edad y salario"
-    )
-    st.plotly_chart(fig3, use_container_width=True)
+# Gráficos completos
+st.subheader("Relación entre Edad y Salario")
+fig3 = px.scatter(filtered_df, x='age', y='salary', color='gender',
+                  hover_data=['position'], title="Edad vs Salario", 
+                  labels={'age': 'Edad', 'salary': 'Salario'})
+st.plotly_chart(fig3)
 
-with col4:
-    st.subheader("Horas vs. Puntaje de desempeño")
-    fig4 = px.box(
-        df_filtered, x="performance_score", y="average_work_hours", points="all",
-        labels={"average_work_hours": "Horas trabajadas"},
-        title="Promedio de horas por desempeño"
-    )
-    st.plotly_chart(fig4, use_container_width=True)
+st.subheader("Relación entre Horas Trabajadas y Desempeño")
+fig4 = px.scatter(filtered_df, x='average_work_hours', y='performance_score', color='gender',
+                  title="Horas Trabajadas vs Desempeño", 
+                  labels={'average_work_hours': 'Horas promedio', 'performance_score': 'Desempeño'})
+st.plotly_chart(fig4)
+
+# Tabla resumen
+st.subheader("Vista de Datos Filtrados")
+cols = ['name_employee', 'position', 'hiring_date', 'last_performance_date', 'satisfaction_level', 'absences']
+st.dataframe(filtered_df[cols])
 
 # Conclusión
+st.subheader("Conclusión del Análisis")
 st.markdown("""
-### Conclusión
-
-Este dashboard permite una visión integral de cómo se relacionan los datos de desempeño con otras variables relevantes. 
-Los filtros dinámicos ayudan a enfocar los análisis en diferentes perfiles.
+Este dashboard muestra cómo ciertos factores como el género, estado civil y desempeño están relacionados con el promedio de horas trabajadas, edad y salario. 
+Estos datos pueden ayudar a identificar oportunidades de mejora en la gestión de personal.
 """)
