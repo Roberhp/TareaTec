@@ -10,7 +10,7 @@ st.title("Análisis de Desempeño de los Colaboradores")
 st.markdown("Este dashboard permite explorar datos clave del personal de Socialize your Knowledge, facilitando la toma de decisiones basadas en desempeño, género y otros atributos laborales.")
 
 # Logo
-st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Logo_socialize.png/320px-Logo_socialize.png", width=150)
+st.image("https://cdn-icons-png.flaticon.com/512/1055/1055646.png", width=150)
 
 # Filtros
 st.sidebar.header("Filtros")
